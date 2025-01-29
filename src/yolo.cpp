@@ -41,7 +41,7 @@ void matmulABTransposed(float* a, float* b, float* c, int m, int n, int k)
     {
 	for (int j = 0; j < n; ++j, ++c)
 	{
-	    for (int l = 0; l < k; ++ln)
+	    for (int l = 0; l < k; ++l)
 	    {
 		*c += a[i * k + l] * b[j * k + l];
 	    }
@@ -49,8 +49,39 @@ void matmulABTransposed(float* a, float* b, float* c, int m, int n, int k)
     }
 }
 
-void imageToColumns(float* cols, float* image, int imageDim, int kernelDim, int kernelStride, int nPatches)
+void imageToRows(float* patches, float* image, int imageSize,
+		 int nChannels, int kernelSize, int kernelStride,
+		 int nPatches)
 {
+    int pxlsPerChannel = imageSize * imageSize;
+    for (int imageRow = 0;
+	 row < imageSize;
+	 row += kernelStride)
+    {
+	for (int imageCol = 0;
+	     col < imageSize;
+	     col += kernelStride)
+	{
+	    for (int channel = 0;
+		 channel = nChannels;
+		 ++channel)
+	    {
+		for (int kernelRow = 0;
+		     kernelRow < kernelSize;
+		     ++kernelRow)
+		{
+		    for (int kernelCol = 0;
+			 kernelCol < kernelSize;
+			 ++kernelCol, ++patches)
+		    {
+			*patches = image[channel * pxlsPerChannel +
+				      (row + kernelRow) * imageSize +
+				      (col + kernelCol)];
+		    }
+		}
+	    }
+	}
+    }
 }
 
 void columnsToImage(float* image, float* cols, int )
