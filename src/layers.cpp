@@ -3,10 +3,10 @@
 #define BATCH_SIZE 32
 #define NEGATIVE_SLOPE -1e-2
 
-void convolutionForward(float* output, float* input, float* patches,
-			float* kernel, int inputChannels, int inputSize,
-			int outputChannels, int kernelSize, int kernelStride,
-			int nPatches, int nPerPatch)
+void convBnActForward(float* activation, float* output, float* input, float* patches,
+		      float* kernel, int inputChannels, int inputSize,
+		      int outputChannels, int kernelSize, int kernelStride,
+		      int nPatches, int nPerPatch)
 {
     imageToColumns(patches, input, inputSize,
 		   inputChannels, kernelSize,
@@ -18,26 +18,44 @@ void convolutionForward(float* output, float* input, float* patches,
 
     for (int i = 0;
 	 i < outputChannels * nPatches;
-	 ++i, ++output)
+	 ++i, ++output, ++activation)
     {
-	if (*output < 0)
+	if (*output >= 0)
 	{
-	    *output *= NEGATIVE_SLOPE;
+	    *activation = *output;
+	}
+	else
+	{
+	    *activation = *output * NEGATIVE_SLOPE;
 	}
     }
 }
 
 // TODO(louis): introduce a bias?
-void convolutionBackward(float* dlkernel, float* dlinput, float* dlpatches,
-			 float* dloutput, float* kernel, float* patches,
-			 int inputChannels, int inputSize, int outputChannels,
-			 int kernelSize, int kernelStride, int nPatches, int nPerPatch)
+void convBnActBackward(float* dlkernel, float* dlinput, float* dlpatches,
+		       float* dlactivation, float* dloutput, float* output, float* kernel, float* patches,
+		       int inputChannels, int inputSize, int outputChannels,
+		       int kernelSize, int kernelStride, int nPatches, int nPerPatch)
 {
     // NOTE(louis):
     // * dloutput: outputChannels, nPatches
     // * kernel: outputChannels, nPerPatch
     // * patches: nPerPatch, nPatches
     // * input: inputSize, inputSize
+
+    for (int i = 0;
+	 i < outputChannels * nPatches;
+	 ++i, ++dlactivation, ++output, ++dloutput)
+    {
+	if (*output >= 0)
+	{
+	    *dloutput = *dlactivation;
+	}
+	else
+	{
+	    *dloutput = *dlactivation * NEGATIVE_SLOPE;
+	}
+    }
 
     // TODO(louis): Fuse matmul and col2im, according to paper
     if (dlinput)

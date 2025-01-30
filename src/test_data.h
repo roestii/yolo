@@ -1,6 +1,6 @@
 #ifndef TEST_DATA_H
 #define TEST_DATA_H
-
+/*
 #define N_CHANNELS 3
 #define KERNEL_STRIDE 1
 #define KERNEL_SIZE 3
@@ -8,6 +8,7 @@
 #define N_KERNELS 3
 #define N_PATCHES ((IMAGE_SIZE - KERNEL_SIZE) / KERNEL_STRIDE + 1) * ((IMAGE_SIZE - KERNEL_SIZE) / KERNEL_STRIDE + 1)
 #define N_ENTRIES_PATCH KERNEL_SIZE * KERNEL_SIZE * N_CHANNELS
+*/
 
 // 3 * 4 * 4
 static float testImage[] = {

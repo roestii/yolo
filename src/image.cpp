@@ -69,3 +69,9 @@ void imageToRows(float* patches, float* image, int imageSize,
 	}
     }
 }
+
+void columnsToImage(float* image, float* columns, int imageSize,
+		    int nChannels, int kernelSize, int kernelStride)
+{
+}
+
