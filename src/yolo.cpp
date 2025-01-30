@@ -67,12 +67,13 @@ void imageToColumns(float* patches, float* image, int imageSize,
 		 ++kernelCol)
 	    {
 		for (int imageRow = 0;
-		     imageRow < imageSize;
+		     imageRow < imageSize - kernelSize + 1;
 		     imageRow += kernelStride)
 		{
 		    for (int imageCol = 0;
-			 imageCol < imageSize;
+			 imageCol < imageSize - kernelSize + 1;
 			 imageCol += kernelStride, ++patches)
+			
 		    {
 			*patches = image[channel * pxlsPerChannel +
 					 (imageRow + kernelRow) * imageSize +
@@ -89,11 +90,11 @@ void imageToRows(float* patches, float* image, int imageSize,
 {
     int pxlsPerChannel = imageSize * imageSize;
     for (int imageRow = 0;
-	 imageRow < imageSize;
+	 imageRow < imageSize - kernelSize + 1;
 	 imageRow += kernelStride)
     {
 	for (int imageCol = 0;
-	     imageCol < imageSize;
+	     imageCol < imageSize - kernelSize + 1;
 	     imageCol += kernelStride)
 	{
 	    for (int channel = 0;
@@ -118,19 +119,8 @@ void imageToRows(float* patches, float* image, int imageSize,
     }
 }
 
-void columnsToImage(float* image, float* cols, int )
-{
-}
-
 int main()
 {
-    float patches[4 * 4 * 3] = {0};
-    // imageToRows(patches, testImage, 4, 3, 2, 2);
-
-    imageToColumns(patches, testImage, 4, 3, 2, 2);
-    float conv[2 * 4] = {0};
-    matmulSlow(testKernelRow, patches, conv, 2, 4, 2 * 2 * 3);
-    // float conv[4 * 2] = {0}; 
-    // matmulSlow(patches, testKernel, conv, 4, 2, 2 * 2 * 3);
-    printf("");
+    // can we go backwards?
+    return 0;
 }
