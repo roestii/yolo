@@ -49,21 +49,55 @@ void matmulABTransposed(float* a, float* b, float* c, int m, int n, int k)
     }
 }
 
+void imageToColumns(float* patches, float* image, int imageSize,
+		    int nChannels, int kernelSize, int kernelStride)
+{
+    int pxlsPerChannel = imageSize * imageSize;
+
+    for (int channel = 0;
+	 channel < nChannels;
+	 ++channel)
+    {
+	for (int kernelRow = 0;
+	     kernelRow < kernelSize;
+	     ++kernelRow)
+	{
+	    for (int kernelCol = 0;
+		 kernelCol < kernelSize;
+		 ++kernelCol)
+	    {
+		for (int imageRow = 0;
+		     imageRow < imageSize;
+		     imageRow += kernelStride)
+		{
+		    for (int imageCol = 0;
+			 imageCol < imageSize;
+			 imageCol += kernelStride, ++patches)
+		    {
+			*patches = image[channel * pxlsPerChannel +
+					 (imageRow + kernelRow) * imageSize +
+					 (imageCol + kernelCol)];
+		    }
+		}
+	    }
+	}
+    }
+}
+
 void imageToRows(float* patches, float* image, int imageSize,
-		 int nChannels, int kernelSize, int kernelStride,
-		 int nPatches)
+		 int nChannels, int kernelSize, int kernelStride)
 {
     int pxlsPerChannel = imageSize * imageSize;
     for (int imageRow = 0;
-	 row < imageSize;
-	 row += kernelStride)
+	 imageRow < imageSize;
+	 imageRow += kernelStride)
     {
 	for (int imageCol = 0;
-	     col < imageSize;
-	     col += kernelStride)
+	     imageCol < imageSize;
+	     imageCol += kernelStride)
 	{
 	    for (int channel = 0;
-		 channel = nChannels;
+		 channel < nChannels;
 		 ++channel)
 	    {
 		for (int kernelRow = 0;
@@ -75,8 +109,8 @@ void imageToRows(float* patches, float* image, int imageSize,
 			 ++kernelCol, ++patches)
 		    {
 			*patches = image[channel * pxlsPerChannel +
-				      (row + kernelRow) * imageSize +
-				      (col + kernelCol)];
+					 (imageRow + kernelRow) * imageSize +
+					 (imageCol + kernelCol)];
 		    }
 		}
 	    }
@@ -90,33 +124,13 @@ void columnsToImage(float* image, float* cols, int )
 
 int main()
 {
-    float a[] = { 1, 2, 3, 4 };
-    float b[] = { 5, 6, 7, 8 };
-    float c[4] = { 0 };
-    float d[4] = { 0 };
-    float e[4] = { 0 };
+    float patches[4 * 4 * 3] = {0};
+    // imageToRows(patches, testImage, 4, 3, 2, 2);
 
-    matmulSlow(a, b, c, 2, 2, 2);
-    printf("a * b\n");
-    for (int i = 0; i < 4; ++i)
-    {
-	printf("%f\n", c[i]);
-    }
-
-    matmulATransposedB(a, b, d, 2, 2, 2);
-    printf("a^T * b\n");
-    for (int i = 0; i < 4; ++i)
-    {
-	printf("%f\n", d[i]);
-    }
-    
-    matmulABTransposed(a, b, e, 2, 2, 2);
-    printf("a * b^T\n");
-    for (int i = 0; i < 4; ++i)
-    {
-	printf("%f\n", e[i]);
-    }
-
-    
-    return 0;
+    imageToColumns(patches, testImage, 4, 3, 2, 2);
+    float conv[2 * 4] = {0};
+    matmulSlow(testKernelRow, patches, conv, 2, 4, 2 * 2 * 3);
+    // float conv[4 * 2] = {0}; 
+    // matmulSlow(patches, testKernel, conv, 4, 2, 2 * 2 * 3);
+    printf("");
 }
