@@ -5,6 +5,12 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#define assert(exp) \
+    if (!(exp))					\
+    {						\
+	__builtin_trap();			\
+    }						\
+
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;

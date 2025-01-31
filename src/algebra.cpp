@@ -93,6 +93,7 @@ static float A_T[] = {
 static float uTmp[F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
 static float vTmp[F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
 static float outputTmp[F2x2_3x3OUTPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
+static float d[F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
 
 // TODO(louis): We need matrices U, V, and M that fit all of the us, vs, and ms.
 // Should we determine the maximum size needed for U and V for every convolution,
@@ -133,12 +134,16 @@ void tileElementReduce2d(float* output, float* input, int nDim1,
 }
 
 void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
-		 float* Utmp, float* Vtmp,
-		 float* input, float* filter, int inputSize,
-		 int channels, int kernels, int tiles)
+			 float* Utmp, float* Vtmp,
+			 float* input, float* filter, int inputSize,
+			 int channels, int kernels, int tiles)
 {
+    // TODO(louis): write a reference implementation that works in python
+
+    
     // TODO(louis): How do we have to lay out the memory for the filters, and the input?
-    // What if we recompose the input channels x tiles x 4 x 4
+    // What if we recompose the input channels x tiles x 4 x 4, we should in fact do that, as the output is of that
+    // same shape as well
 
         
     // NOTE(louis): the input is of size channels * inputSize * inputSize
@@ -160,7 +165,7 @@ void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
     // int tiles = pxlsPerChannel >> 2;
     float* g = filter;
     float* tilePtr = input;
-    float* channelTilePtr,* d;
+    float* channelTilePtr;
     float* u = U;
     float* v = V;
     float* m = M;
@@ -188,33 +193,48 @@ void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
 	}
     }
 
+    for (int row = 0;
+	 row < inputSize;
+	 row += F2x2_3x3INPUT_TILE_SIZE,
+	     tilePtr += inputSize) // NOTE(louis): inputSize corresponds to the size of a row.
+    {
+	for (int col = 0;
+	     col < inputSize;
+	     col += F2x2_3x3INPUT_TILE_SIZE)
+	{
+	    channelTilePtr = tilePtr;
+	    for (int channel = 0;
+		 channel < channels;
+		 ++channel,
+		     v += F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE,
+		     channelTilePtr += pxlsPerChannel)
+	    {
+		// TODO(louis): Make these matrix multiplications fast
+		// as they are of known size, with something like schwartz vaknin
+		// (recursive 2x2 matmuls)
+	    
+		// v = B^T * d[c,t] * B
+		// B^T: 4x4, d[c,t]: 4x4 -> v: 4x4
+		// V: c * t * 4 * 4
+
+		tiledCopy(d, channelTilePtr, inputSize);
+		matmulSlow(B_T, d, vTmp, F2x2_3x3INPUT_TILE_SIZE,
+			   F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
+
+		matmulSlow(vTmp, B, v, F2x2_3x3INPUT_TILE_SIZE,
+			   F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
+	    }
+
+	    
+	}
+    }
+
     for (int tile = 0;
 	 tile < tiles;
 	 ++tile,
 	     tilePtr += F2x2_3x3INPUT_TILE_SIZE)
     {
 	channelTilePtr = tilePtr;
-	for (int channel = 0;
-	     channel < channels;
-	     ++channel,
-		 v += F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE,
-		 d += pxlsPerChannel)
-	{
-	    // TODO(louis): Make these matrix multiplications fast
-	    // as they are of known size, with something like schwartz vaknin
-	    // (recursive 2x2 matmuls)
-	    
-	    // v = B^T * d[c,t] * B
-	    // B^T: 4x4, d[c,t]: 4x4 -> v: 4x4
-	    // V: c * t * 4 * 4
-
-	    tiledCopy(d, channelTilePtr, inputSize);
-	    matmulSlow(B_T, d, vTmp, F2x2_3x3INPUT_TILE_SIZE,
-		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
-
-	    matmulSlow(vTmp, B, v, F2x2_3x3INPUT_TILE_SIZE,
-		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
-	}
     }
 
     for (int tileElement = 0;
