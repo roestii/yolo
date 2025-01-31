@@ -3,11 +3,13 @@
 #define BATCH_SIZE 32
 #define NEGATIVE_SLOPE -1e-2
 
-void convBnActForward(float* activation, float* output, float* input, float* patches,
-		      float* kernel, int inputChannels, int inputSize,
-		      int outputChannels, int kernelSize, int kernelStride,
-		      int nPatches, int nPerPatch)
+void convBnActForward3x3s1(float* activation, float* output, float* input, float* patches,
+			   float* kernel, int inputChannels, int inputSize,
+			   int outputChannels, int kernelSize, int kernelStride,
+			   int nPatches, int nPerPatch)
 {
+    // TODO(louis): Fuse imageToColumns and matmul according to the paper
+    // Since we only use 3 x 3 kernels with a stride of 1 the winograd algorithm (lavin & gray) can be nice here.
     imageToColumns(patches, input, inputSize,
 		   inputChannels, kernelSize,
 		   kernelStride);
@@ -32,10 +34,10 @@ void convBnActForward(float* activation, float* output, float* input, float* pat
 }
 
 // TODO(louis): introduce a bias?
-void convBnActBackward(float* dlkernel, float* dlinput, float* dlpatches,
-		       float* dlactivation, float* dloutput, float* output, float* kernel, float* patches,
-		       int inputChannels, int inputSize, int outputChannels,
-		       int kernelSize, int kernelStride, int nPatches, int nPerPatch)
+void convBnActBackward3x3s1(float* dlkernel, float* dlinput, float* dlpatches
+			    float* dlactivation, float* dloutput, float* output, float* kernel, float* patches,
+			    int inputChannels, int inputSize, int outputChannels,
+			    int kernelSize, int kernelStride, int nPatches, int nPerPatch)
 {
     // NOTE(louis):
     // * dloutput: outputChannels, nPatches
