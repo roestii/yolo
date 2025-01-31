@@ -5,6 +5,6 @@
 
 int main()
 {
-    testWinograd3x3();
+    testF2x2_3x3Convolution();
     return 0;
 }

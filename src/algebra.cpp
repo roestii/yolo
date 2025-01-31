@@ -90,9 +90,9 @@ static float A_T[] = {
     0, 1, -1, -1
 };
 
-static float uTmp[W3x3_INPUT_TILE_SIZE * W3x3_INPUT_TILE_SIZE];
-static float vTmp[W3x3_INPUT_TILE_SIZE * W3x3_INPUT_TILE_SIZE];
-static float outputTmp[W3x3_OUTPUT_TILE_SIZE * W3x3_INPUT_TILE_SIZE];
+static float uTmp[F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
+static float vTmp[F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
+static float outputTmp[F2x2_3x3OUTPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
 
 // TODO(louis): We need matrices U, V, and M that fit all of the us, vs, and ms.
 // Should we determine the maximum size needed for U and V for every convolution,
@@ -102,11 +102,11 @@ void tiledCopy(float* tile, float* input, int inputSize)
 {
     // TODO(louis): We could hand roll this completely and use simd registers
     for (int row = 0;
-	 row < W3x3_INPUT_TILE_SIZE;
+	 row < F2x2_3x3INPUT_TILE_SIZE;
 	 ++row, input += inputSize)
     {
 	for (int col = 0;
-	     col < W3x3_INPUT_TILE_SIZE;
+	     col < F2x2_3x3INPUT_TILE_SIZE;
 	     ++col, ++tile)
 	{
 	    *tile = *(input + col);
@@ -117,6 +117,7 @@ void tiledCopy(float* tile, float* input, int inputSize)
 void tileElementReduce2d(float* output, float* input, int nDim1,
 			 int nDim2, int tileElement)
 {
+    input += tileElement;
     for (int row = 0;
 	 row < nDim1;
 	 ++row)
@@ -124,14 +125,14 @@ void tileElementReduce2d(float* output, float* input, int nDim1,
 	for (int col = 0;
 	     col < nDim2;
 	     ++col, ++output,
-		 input += W3x3_INPUT_TILE_SIZE * W3x3_INPUT_TILE_SIZE)
+		 input += F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE)
 	{
-	    *output = *(input + tileElement);
+	    *output = *input;
 	}
     }
 }
 
-void winograd3x3(float* output, float* U, float* V, float* M,
+void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
 		 float* Utmp, float* Vtmp,
 		 float* input, float* filter, int inputSize,
 		 int channels, int kernels, int tiles)
@@ -171,32 +172,32 @@ void winograd3x3(float* output, float* U, float* V, float* M,
 	for (int channel = 0;
 	     channel < channels;
 	     ++channel,
-		 g += W3x3_FILTER_SIZE * W3x3_FILTER_SIZE,
-		 u += W3x3_INPUT_TILE_SIZE * W3x3_INPUT_TILE_SIZE)
+		 g += F2x2_3x3FILTER_SIZE * F2x2_3x3FILTER_SIZE,
+		 u += F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE)
 	{
 	    // u = G * g[k,c] * G^T
 	    // G: 4x3, g[k,c]: 3x3 -> u: 4x4
 	    // U: k * c * 4 * 4
 	    matmulSlow(G, g, uTmp,
-		       W3x3_INPUT_TILE_SIZE, W3x3_FILTER_SIZE,
-		       W3x3_FILTER_SIZE);
+		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3FILTER_SIZE,
+		       F2x2_3x3FILTER_SIZE);
 
 	    matmulSlow(uTmp, G_T, u,
-		       W3x3_INPUT_TILE_SIZE, W3x3_INPUT_TILE_SIZE,
-		       W3x3_FILTER_SIZE);
+		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE,
+		       F2x2_3x3FILTER_SIZE);
 	}
     }
 
     for (int tile = 0;
 	 tile < tiles;
 	 ++tile,
-	     tilePtr += W3x3_INPUT_TILE_SIZE)
+	     tilePtr += F2x2_3x3INPUT_TILE_SIZE)
     {
 	channelTilePtr = tilePtr;
 	for (int channel = 0;
 	     channel < channels;
 	     ++channel,
-		 v += W3x3_INPUT_TILE_SIZE * W3x3_INPUT_TILE_SIZE,
+		 v += F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE,
 		 d += pxlsPerChannel)
 	{
 	    // TODO(louis): Make these matrix multiplications fast
@@ -208,16 +209,16 @@ void winograd3x3(float* output, float* U, float* V, float* M,
 	    // V: c * t * 4 * 4
 
 	    tiledCopy(d, channelTilePtr, inputSize);
-	    matmulSlow(B_T, d, vTmp, W3x3_INPUT_TILE_SIZE,
-		       W3x3_INPUT_TILE_SIZE, W3x3_INPUT_TILE_SIZE);
+	    matmulSlow(B_T, d, vTmp, F2x2_3x3INPUT_TILE_SIZE,
+		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
 
-	    matmulSlow(vTmp, B, v, W3x3_INPUT_TILE_SIZE,
-		       W3x3_INPUT_TILE_SIZE, W3x3_INPUT_TILE_SIZE);
+	    matmulSlow(vTmp, B, v, F2x2_3x3INPUT_TILE_SIZE,
+		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
 	}
     }
 
     for (int tileElement = 0;
-	 tileElement < W3x3_INPUT_TILE_SIZE * W3x3_INPUT_TILE_SIZE;
+	 tileElement < F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE;
 	 ++tileElement, m += kernels * tiles)
     {
 	// M[:,:,i,j] = U[:,:,i,j] * V[:,:,i,j]
@@ -239,17 +240,17 @@ void winograd3x3(float* output, float* U, float* V, float* M,
 	for (int tile = 0;
 	     tile < tiles;
 	     ++tile,
-		 output += W3x3_OUTPUT_TILE_SIZE * W3x3_OUTPUT_TILE_SIZE,
-		 m += W3x3_INPUT_TILE_SIZE * W3x3_INPUT_TILE_SIZE)
+		 output += F2x2_3x3OUTPUT_TILE_SIZE * F2x2_3x3OUTPUT_TILE_SIZE,
+		 m += F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE)
 	{
 	    // Y[k,t] = A_T * m * A
 	    // A: 4x2, m: 4x4: Y[k,t]: 2x2 (F(2x2, 3x3))
 
-	    matmulSlow(A_T, m, outputTmp, W3x3_OUTPUT_TILE_SIZE,
-		       W3x3_INPUT_TILE_SIZE, W3x3_INPUT_TILE_SIZE);
+	    matmulSlow(A_T, m, outputTmp, F2x2_3x3OUTPUT_TILE_SIZE,
+		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
 	    
-	    matmulSlow(outputTmp, A, output, W3x3_OUTPUT_TILE_SIZE,
-		       W3x3_INPUT_TILE_SIZE, W3x3_OUTPUT_TILE_SIZE);
+	    matmulSlow(outputTmp, A, output, F2x2_3x3OUTPUT_TILE_SIZE,
+		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3OUTPUT_TILE_SIZE);
 	    	    
 	}
     }
