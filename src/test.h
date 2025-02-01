@@ -77,6 +77,7 @@ static float M[TEST_FILTER_CHANNELS * TEST_TILES *
 	       F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE] = {0};
 static float Utmp[TEST_FILTER_CHANNELS * TEST_IMAGE_CHANNELS] = {0};
 static float Vtmp[TEST_IMAGE_CHANNELS * TEST_TILES] = {0};
+static float Mtmp[TEST_FILTER_CHANNELS * TEST_TILES] = {0};
 
 static float expected[sizeof(output) / sizeof(float)] = {
     -0.0227,  3.1503,  2.2196, -0.1066,  2.3752,  4.3258,
@@ -101,7 +102,7 @@ static float expected[sizeof(output) / sizeof(float)] = {
 
 void testF2x2_3x3Convolution()
 {
-    f2x2_3x3Convolution(output, U, V, M, Utmp, Vtmp,
+    f2x2_3x3Convolution(output, U, V, M, Utmp, Vtmp, Mtmp,
 			testImage, testKernel, TEST_IMAGE_SIZE,
 			TEST_IMAGE_CHANNELS, TEST_FILTER_CHANNELS,
 			TEST_TILES);

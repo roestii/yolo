@@ -41,11 +41,11 @@ def f2x2_3x3_convolution(input, kernel):
                 V[c, b] = B.T @ d @ B
                 b += 1
 
-    breakpoint()
-
     for eps in range(alpha):
         for ups in range(alpha):
             M[:, :, eps, ups] = U[:, :, eps, ups] @ V[:, :, eps, ups]
+
+    breakpoint()
 
     for k in range(K):
         for b in range(P):

@@ -135,7 +135,7 @@ void tileElementReduce2d(float* output, float* input, int nDim1,
 }
 
 void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
-			 float* Utmp, float* Vtmp,
+			 float* Utmp, float* Vtmp, float* Mtmp,
 			 float* input, float* filter, int inputSize,
 			 int channels, int kernels, int tiles)
 {
@@ -230,10 +230,13 @@ void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
 	}
     }
 
+    // TODO(louis): Somehow the ordering of M is wrong, I'm worried this is gonna be a hard one
+    // we have to figure out the correct matrix multiply here
     for (int tileElement = 0;
 	 tileElement < F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE;
-	 ++tileElement, m += kernels * tiles)
+	 ++tileElement)
     {
+	m = M + tileElement;
 	// M[:,:,i,j] = U[:,:,i,j] * V[:,:,i,j]
 	// M[eps, ups] = U[eps, ups] * V[eps, ups]
 	// U[eps, ups]: k * c, V[eps, ups]: c * t
@@ -242,7 +245,22 @@ void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
 
 	tileElementReduce2d(Utmp, U, kernels, channels, tileElement);
 	tileElementReduce2d(Vtmp, V, channels, tiles, tileElement);
-	matmulSlow(Utmp, Vtmp, m, kernels, tiles, channels);
+	matmulSlow(Utmp, Vtmp, Mtmp, kernels, tiles, channels);
+
+	float* mTmp = Mtmp;
+	for (int k = 0;
+	     k < kernels;
+	     ++k)
+	{
+	    for (int t = 0;
+		 t < tiles;
+		 ++t,
+		     m += F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE,
+		     ++mTmp)
+	    {
+		*m = *mTmp;
+	    }
+	}
     }
 
     m = M;

@@ -12,7 +12,7 @@ void matmulATransposedB(float*, float*, float*, int, int, int);
 void matmulABTransposed(float*, float*, float*, int, int, int);
 
 void f2x2_3x3Convolution(float*, float*, float*, float*,
-			 float*, float*, float*, float*,
+			 float*, float*, float*, float*, float*,
 			 int, int, int, int);
 
 #endif
