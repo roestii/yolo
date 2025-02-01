@@ -281,7 +281,7 @@ void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
 		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
 	    
 	    matmulSlow(outputTmp, F2x2_3x3A, output, F2x2_3x3OUTPUT_TILE_SIZE,
-		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3OUTPUT_TILE_SIZE);
+		       F2x2_3x3OUTPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
 	    	    
 	}
     }
