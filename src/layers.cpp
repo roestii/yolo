@@ -13,7 +13,7 @@ void convBnActForward3x3s1(float* activation, float* output, float* input, float
     imageToColumns(patches, input, inputSize,
 		   inputChannels, kernelSize,
 		   kernelStride);
-    
+
     matmulSlow(kernel, patches, output,
 	       outputChannels, nPatches,
 	       nPerPatch);

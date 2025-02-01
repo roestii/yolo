@@ -32,15 +32,16 @@ def f2x2_3x3_convolution(input, kernel):
         for c in range(C):
             g = kernel[k, c]
             U[k, c] = G @ g @ G.T
-
-    b = 0
     # TODO(louis): there is a bug here, how do we get the tile indices?
-    for x in range(0, input.shape[-1] - alpha + 1, m):
-        for y in range(0, input.shape[-1] - alpha + 1, m):
-            for c in range(C):
+    for c in range(C):
+        b = 0
+        for x in range(0, input.shape[-1] - alpha + 1, m):
+            for y in range(0, input.shape[-1] - alpha + 1, m):
                 d = input[c, x:x+alpha, y:y+alpha]
                 V[c, b] = B.T @ d @ B
-            b += 1
+                b += 1
+
+    breakpoint()
 
     for eps in range(alpha):
         for ups in range(alpha):

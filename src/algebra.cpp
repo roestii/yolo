@@ -7,6 +7,7 @@ void matmulSlow(float* a, float* b, float* c, int m, int n, int k)
     {
 	for (int j = 0; j < n; ++j, ++c)
 	{
+	    *c = 0;
 	    for (int l = 0; l < k; ++l)
 	    {
 		*c += a[i * k + l] * b[l * n + j];
@@ -18,11 +19,11 @@ void matmulSlow(float* a, float* b, float* c, int m, int n, int k)
 void matmulATransposedB(float* a, float* b, float* c, int m, int n, int k)
 {
     // NOTE(louis): a is k x m, b is k x n, thus c is m x n
-
     for (int i = 0; i < m; ++i)
     {
 	for (int j = 0; j < n; ++j, ++c)
 	{
+	    *c = 0;
 	    for (int l = 0; l < k; ++l)
 	    {
 		*c += a[l * m + i] * b[l * n + j];
@@ -34,11 +35,11 @@ void matmulATransposedB(float* a, float* b, float* c, int m, int n, int k)
 void matmulABTransposed(float* a, float* b, float* c, int m, int n, int k)
 {
     // NOTE(louis): a is m x k, b is n x k, thus c is m x n
-
     for (int i = 0; i < m; ++i)
     {
 	for (int j = 0; j < n; ++j, ++c)
 	{
+	    *c = 0;
 	    for (int l = 0; l < k; ++l)
 	    {
 		*c += a[i * k + l] * b[j * k + l];
@@ -49,15 +50,15 @@ void matmulABTransposed(float* a, float* b, float* c, int m, int n, int k)
 
 
 // According to Lavin and Gray, the matrics B^T, A^T, and G
-
-static float B[] = {
+ 
+static float F2x2_3x3B[] = {
      1, 0,  0,  0,
      0, 1, -1,  1,
     -1, 1,  1,  0,
      0, 0,  0, -1
 };
 
-static float B_T[] = {
+static float F2x2_3x3B_T[] = {
     1,  0, -1,  0,
     0,  1,  1,  0,
     0, -1,  1,  0,
@@ -65,27 +66,27 @@ static float B_T[] = {
 };
 
 
-static float G[] = {
+static float F2x2_3x3G[] = {
     1.0,  0.0, 0.0,
     0.5,  0.5, 0.5,
     0.5, -0.5, 0.5,
     0.0,  0.0, 1.0
 };
 
-static float G_T[] = {
+static float F2x2_3x3G_T[] = {
     1.0, 0.5,  0.5, 0.0,
     0.0, 0.5, -0.5, 0.0,
     0.0, 0.5,  0.5, 1.0
 };
 
-static float A[] = {
+static float F2x2_3x3A[] = {
     1,  0,
     1,  1,
     1, -1,
     0, -1
 };
 
-static float A_T[] = {
+static float F2x2_3x3A_T[] = {
     1, 1,  1,  0,
     0, 1, -1, -1
 };
@@ -165,7 +166,7 @@ void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
     // int tiles = pxlsPerChannel >> 2;
     float* g = filter;
     float* tilePtr = input;
-    float* channelTilePtr;
+    float* columnTilePtr;
     float* u = U;
     float* v = V;
     float* m = M;
@@ -183,31 +184,33 @@ void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
 	    // u = G * g[k,c] * G^T
 	    // G: 4x3, g[k,c]: 3x3 -> u: 4x4
 	    // U: k * c * 4 * 4
-	    matmulSlow(G, g, uTmp,
+	    matmulSlow(F2x2_3x3G, g, uTmp,
 		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3FILTER_SIZE,
 		       F2x2_3x3FILTER_SIZE);
 
-	    matmulSlow(uTmp, G_T, u,
+	    matmulSlow(uTmp, F2x2_3x3G_T, u,
 		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE,
 		       F2x2_3x3FILTER_SIZE);
 	}
     }
 
-    for (int row = 0;
-	 row < inputSize;
-	 row += F2x2_3x3INPUT_TILE_SIZE,
-	     tilePtr += inputSize) // NOTE(louis): inputSize corresponds to the size of a row.
+    // TODO(louis): collapse these loops
+    for (int channel = 0;
+	 channel < channels;
+	 ++channel,
+	     tilePtr += F2x2_3x3OUTPUT_TILE_SIZE * inputSize)
     {
-	for (int col = 0;
-	     col < inputSize;
-	     col += F2x2_3x3INPUT_TILE_SIZE)
+	for (int row = 0;
+	     row < inputSize - F2x2_3x3INPUT_TILE_SIZE + 1;
+	     row += F2x2_3x3OUTPUT_TILE_SIZE,
+		 tilePtr += F2x2_3x3OUTPUT_TILE_SIZE + (F2x2_3x3OUTPUT_TILE_SIZE - 1) * inputSize)
 	{
-	    channelTilePtr = tilePtr;
-	    for (int channel = 0;
-		 channel < channels;
-		 ++channel,
+	    for (int col = 0;
+		 col < inputSize - F2x2_3x3INPUT_TILE_SIZE + 1;
+		 col += F2x2_3x3OUTPUT_TILE_SIZE,
 		     v += F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE,
-		     channelTilePtr += pxlsPerChannel)
+		     tilePtr += F2x2_3x3OUTPUT_TILE_SIZE
+		)
 	    {
 		// TODO(louis): Make these matrix multiplications fast
 		// as they are of known size, with something like schwartz vaknin
@@ -217,24 +220,14 @@ void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
 		// B^T: 4x4, d[c,t]: 4x4 -> v: 4x4
 		// V: c * t * 4 * 4
 
-		tiledCopy(d, channelTilePtr, inputSize);
-		matmulSlow(B_T, d, vTmp, F2x2_3x3INPUT_TILE_SIZE,
+		tiledCopy(d, tilePtr, inputSize);
+		matmulSlow(F2x2_3x3B_T, d, vTmp, F2x2_3x3INPUT_TILE_SIZE,
 			   F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
 
-		matmulSlow(vTmp, B, v, F2x2_3x3INPUT_TILE_SIZE,
+		matmulSlow(vTmp, F2x2_3x3B, v, F2x2_3x3INPUT_TILE_SIZE,
 			   F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
 	    }
-
-	    
 	}
-    }
-
-    for (int tile = 0;
-	 tile < tiles;
-	 ++tile,
-	     tilePtr += F2x2_3x3INPUT_TILE_SIZE)
-    {
-	channelTilePtr = tilePtr;
     }
 
     for (int tileElement = 0;
@@ -245,7 +238,7 @@ void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
 	// M[eps, ups] = U[eps, ups] * V[eps, ups]
 	// U[eps, ups]: k * c, V[eps, ups]: c * t
 	    
-	// M: 4 * 4 * k * t
+	// M: k * t * 4 * 4
 
 	tileElementReduce2d(Utmp, U, kernels, channels, tileElement);
 	tileElementReduce2d(Vtmp, V, channels, tiles, tileElement);
@@ -266,10 +259,10 @@ void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
 	    // Y[k,t] = A_T * m * A
 	    // A: 4x2, m: 4x4: Y[k,t]: 2x2 (F(2x2, 3x3))
 
-	    matmulSlow(A_T, m, outputTmp, F2x2_3x3OUTPUT_TILE_SIZE,
+	    matmulSlow(F2x2_3x3A_T, m, outputTmp, F2x2_3x3OUTPUT_TILE_SIZE,
 		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
 	    
-	    matmulSlow(outputTmp, A, output, F2x2_3x3OUTPUT_TILE_SIZE,
+	    matmulSlow(outputTmp, F2x2_3x3A, output, F2x2_3x3OUTPUT_TILE_SIZE,
 		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3OUTPUT_TILE_SIZE);
 	    	    
 	}
