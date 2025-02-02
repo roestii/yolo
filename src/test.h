@@ -1,7 +1,8 @@
 #ifndef TEST_DATA_H
 #define TEST_DATA_H
 
-#include "algebra.h"
+#include "f2x2_3x3_convolution.h"
+#include "f3x3_2x2_convolution.h"
 #include <math.h>
 
 #define TEST_FILTER_CHANNELS 3
@@ -67,46 +68,92 @@ static float testKernel[] = {
      -1.8185
 };
 
-static float output[TEST_FILTER_CHANNELS * TEST_TILES *
-		    F2x2_3x3OUTPUT_TILE_SIZE * F2x2_3x3OUTPUT_TILE_SIZE] = {0};
-static float U[TEST_FILTER_CHANNELS * TEST_IMAGE_CHANNELS *
-	       F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE] = {0};
-static float V[TEST_IMAGE_CHANNELS * TEST_TILES *
-	       F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE] = {0};
-static float M[TEST_FILTER_CHANNELS * TEST_TILES *
-	       F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE] = {0};
-static float Utmp[TEST_FILTER_CHANNELS * TEST_IMAGE_CHANNELS] = {0};
-static float Vtmp[TEST_IMAGE_CHANNELS * TEST_TILES] = {0};
-static float Mtmp[TEST_FILTER_CHANNELS * TEST_TILES] = {0};
-
-static float expected[sizeof(output) / sizeof(float)] = {
-    -0.0227,  3.1503,  2.2196, -0.1066,  2.3752,  4.3258,
-    -4.4585,  3.2144,  2.9045, -0.7439, -1.7257, -3.7768,
-    -1.4922,  2.7987, -0.6163,  3.1156, -0.4098,  1.2584,
-    -5.0871, -5.5150,  3.0065, -3.7423, -1.0198, -2.4282,
-    -3.5687, -7.2243,  1.4735, -0.7978,  5.3112, -3.6643,
-    -0.3914, -5.2213,  1.0831, -2.7433, -0.2249, -1.6548,
-    -5.9655,  3.7522, -0.7972,  3.1586, -7.0933, -3.8931,
-    3.1125, -3.1726, -0.0541, -2.8078, -2.5397, -6.4351,
-    -5.4950, -2.6114,  5.5279,  2.9568, -4.2548, -3.6926,
-    3.1775, -1.3929,  2.2072,  4.3760,  0.4891,  2.7722,
-    -3.2115,  3.0090, -1.2917,  3.3826, -0.3870, -2.7874,
-    -7.9844, -2.7095, -0.5225,  3.3562,  0.8631, -4.2981,
-    4.2045, -2.4310, -5.4525,  0.5528,  9.5501, -5.6429,
-    -0.3768,  5.0723, -3.1724,  3.3745, 10.2058,  4.1083,
-    6.2456,  4.8398, -2.1411, -3.6407,  4.4391,  4.6554,
-    2.2588,  1.7787,  5.0306,  1.2947, -6.4834, -3.9510,
-    13.8102,  1.4928, -1.4367, -9.3480, -0.1981, 10.1397,
-    -3.1993,  7.2083,  7.0802, -6.6493,  5.4392, -6.3684
-};
-
 void testF2x2_3x3Convolution()
 {
+    float output[TEST_FILTER_CHANNELS * TEST_TILES *
+			F2x2_3x3OUTPUT_TILE_SIZE * F2x2_3x3OUTPUT_TILE_SIZE] = {0};
+    float U[TEST_FILTER_CHANNELS * TEST_IMAGE_CHANNELS *
+		   F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE] = {0};
+    float V[TEST_IMAGE_CHANNELS * TEST_TILES *
+		   F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE] = {0};
+    float M[TEST_FILTER_CHANNELS * TEST_TILES *
+		   F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE] = {0};
+    float Utmp[TEST_FILTER_CHANNELS * TEST_IMAGE_CHANNELS] = {0};
+    float Vtmp[TEST_IMAGE_CHANNELS * TEST_TILES] = {0};
+    float Mtmp[TEST_FILTER_CHANNELS * TEST_TILES] = {0};
+
+    float expected[sizeof(output) / sizeof(float)] = {
+	-0.0227,  3.1503,  2.2196, -0.1066,  2.3752,  4.3258,
+	-4.4585,  3.2144,  2.9045, -0.7439, -1.7257, -3.7768,
+	-1.4922,  2.7987, -0.6163,  3.1156, -0.4098,  1.2584,
+	-5.0871, -5.5150,  3.0065, -3.7423, -1.0198, -2.4282,
+	-3.5687, -7.2243,  1.4735, -0.7978,  5.3112, -3.6643,
+	-0.3914, -5.2213,  1.0831, -2.7433, -0.2249, -1.6548,
+	-5.9655,  3.7522, -0.7972,  3.1586, -7.0933, -3.8931,
+	3.1125, -3.1726, -0.0541, -2.8078, -2.5397, -6.4351,
+	-5.4950, -2.6114,  5.5279,  2.9568, -4.2548, -3.6926,
+	3.1775, -1.3929,  2.2072,  4.3760,  0.4891,  2.7722,
+	-3.2115,  3.0090, -1.2917,  3.3826, -0.3870, -2.7874,
+	-7.9844, -2.7095, -0.5225,  3.3562,  0.8631, -4.2981,
+	4.2045, -2.4310, -5.4525,  0.5528,  9.5501, -5.6429,
+	-0.3768,  5.0723, -3.1724,  3.3745, 10.2058,  4.1083,
+	6.2456,  4.8398, -2.1411, -3.6407,  4.4391,  4.6554,
+	2.2588,  1.7787,  5.0306,  1.2947, -6.4834, -3.9510,
+	13.8102,  1.4928, -1.4367, -9.3480, -0.1981, 10.1397,
+	-3.1993,  7.2083,  7.0802, -6.6493,  5.4392, -6.3684
+    };
+    
     f2x2_3x3Convolution(output, U, V, M, Utmp, Vtmp, Mtmp,
 			testImage, testKernel, TEST_IMAGE_SIZE,
 			TEST_IMAGE_CHANNELS, TEST_FILTER_CHANNELS,
 			TEST_TILES);
+    for (int i = 0;
+	 i < sizeof(output) / sizeof(float);
+	 ++i)
+    {
+	assert(abs(output[i] - expected[i]) < EPS);
+    }
+}
+
+void testF3x3_2x2Convolution()
+{
+    float output[TEST_FILTER_CHANNELS * TEST_TILES *
+			F3x3_2x2OUTPUT_TILE_SIZE * F3x3_2x2OUTPUT_TILE_SIZE] = {0};
+    float U[TEST_FILTER_CHANNELS * TEST_IMAGE_CHANNELS *
+		   F3x3_2x2INPUT_TILE_SIZE * F3x3_2x2INPUT_TILE_SIZE] = {0};
+    float V[TEST_IMAGE_CHANNELS * TEST_TILES *
+		   F3x3_2x2INPUT_TILE_SIZE * F3x3_2x2INPUT_TILE_SIZE] = {0};
+    float M[TEST_FILTER_CHANNELS * TEST_TILES *
+		   F3x3_2x2INPUT_TILE_SIZE * F3x3_2x2INPUT_TILE_SIZE] = {0};
+    float Utmp[TEST_FILTER_CHANNELS * TEST_IMAGE_CHANNELS] = {0};
+    float Vtmp[TEST_IMAGE_CHANNELS * TEST_TILES] = {0};
+    float Mtmp[TEST_FILTER_CHANNELS * TEST_TILES] = {0};
+
+    float expected[sizeof(output) / sizeof(float)] = {
+	-0.0227,  3.1503,  2.2196, -0.1066,  2.3752,  4.3258,
+	-4.4585,  3.2144,  2.9045, -0.7439, -1.7257, -3.7768,
+	-1.4922,  2.7987, -0.6163,  3.1156, -0.4098,  1.2584,
+	-5.0871, -5.5150,  3.0065, -3.7423, -1.0198, -2.4282,
+	-3.5687, -7.2243,  1.4735, -0.7978,  5.3112, -3.6643,
+	-0.3914, -5.2213,  1.0831, -2.7433, -0.2249, -1.6548,
+	-5.9655,  3.7522, -0.7972,  3.1586, -7.0933, -3.8931,
+	3.1125, -3.1726, -0.0541, -2.8078, -2.5397, -6.4351,
+	-5.4950, -2.6114,  5.5279,  2.9568, -4.2548, -3.6926,
+	3.1775, -1.3929,  2.2072,  4.3760,  0.4891,  2.7722,
+	-3.2115,  3.0090, -1.2917,  3.3826, -0.3870, -2.7874,
+	-7.9844, -2.7095, -0.5225,  3.3562,  0.8631, -4.2981,
+	4.2045, -2.4310, -5.4525,  0.5528,  9.5501, -5.6429,
+	-0.3768,  5.0723, -3.1724,  3.3745, 10.2058,  4.1083,
+	6.2456,  4.8398, -2.1411, -3.6407,  4.4391,  4.6554,
+	2.2588,  1.7787,  5.0306,  1.2947, -6.4834, -3.9510,
+	13.8102,  1.4928, -1.4367, -9.3480, -0.1981, 10.1397,
+	-3.1993,  7.2083,  7.0802, -6.6493,  5.4392, -6.3684
+    };
     
+    f3x3_2x2Convolution(output, U, V, M, Utmp, Vtmp, Mtmp,
+			testImage, testKernel, TEST_IMAGE_SIZE,
+			TEST_IMAGE_CHANNELS, TEST_FILTER_CHANNELS,
+			TEST_TILES);
     for (int i = 0;
 	 i < sizeof(output) / sizeof(float);
 	 ++i)
