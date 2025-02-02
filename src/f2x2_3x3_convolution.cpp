@@ -166,12 +166,12 @@ void f2x2_3x3Convolution(float* Y, float* U, float* V, float* M,
     {
 	for (row = 0;
 	     row < inputSize - F2x2_3x3INPUT_TILE_SIZE + 1;
-	     row += F2x2_3x3OUTPUT_TILE_SIZE,
+	     row += F2x2_3x3TILE_OVERLAP,
 		 tilePtr += F2x2_3x3TILE_OVERLAP + (F2x2_3x3TILE_OVERLAP - 1) * inputSize)
 	{
 	    for (col = 0;
 		 col < inputSize - F2x2_3x3INPUT_TILE_SIZE + 1;
-		 col += F2x2_3x3OUTPUT_TILE_SIZE,
+		 col += F2x2_3x3TILE_OVERLAP,
 		     v += F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE,
 		     tilePtr += F2x2_3x3TILE_OVERLAP
 		)
@@ -227,7 +227,6 @@ void f2x2_3x3Convolution(float* Y, float* U, float* V, float* M,
     }
 
     m = M;
-    float* yColStart = Y;
     for (int kernel = 0;
 	 kernel < kernels;
 	 ++kernel)
@@ -235,7 +234,7 @@ void f2x2_3x3Convolution(float* Y, float* U, float* V, float* M,
 	for (int r = 0;
 	     r < row;
 	     r += F2x2_3x3OUTPUT_TILE_SIZE,
-		 yColStart += F2x2_3x3OUTPUT_TILE_SIZE * col)
+		 Y += F2x2_3x3OUTPUT_TILE_SIZE * col)
 	{
 	    for (int c = 0;
 		 c < col;
@@ -248,7 +247,7 @@ void f2x2_3x3Convolution(float* Y, float* U, float* V, float* M,
 			   F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
 		matmulSlow(AmTmp, A, yTmp, F2x2_3x3OUTPUT_TILE_SIZE,
 			   F2x2_3x3OUTPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
-		untile(yColStart + c, yTmp, col);
+		untile(Y + c, yTmp, col);
 	    }
 	}
     }
