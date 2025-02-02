@@ -95,6 +95,8 @@ static float uTmp[F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
 static float vTmp[F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
 static float outputTmp[F2x2_3x3OUTPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
 static float d[F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
+static float yTmp[F2x2_3x3OUTPUT_TILE_SIZE * F2x2_3x3OUTPUT_TILE_SIZE];
+static float AmTmp[F2x2_3x3OUTPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
 
 // TODO(louis): We need matrices U, V, and M that fit all of the us, vs, and ms.
 // Should we determine the maximum size needed for U and V for every convolution,
@@ -112,6 +114,22 @@ void tiledCopy(float* tile, float* input, int inputSize)
 	     ++col, ++tile)
 	{
 	    *tile = *(input + col);
+	}
+    }
+}
+
+void untile(float* output, float* input, int outputSize)
+{
+    float* colStart = output;
+    for (int i = 0;
+	 i < F2x2_3x3OUTPUT_TILE_SIZE;
+	 ++i, colStart += outputSize)
+    {
+	for (int j = 0;
+	     j < F2x2_3x3OUTPUT_TILE_SIZE;
+	     ++j, ++input)
+	{
+	    *(colStart + j) = *input;
 	}
     }
 }
@@ -134,7 +152,7 @@ void tileElementReduce2d(float* output, float* input, int nDim1,
     }
 }
 
-void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
+void f2x2_3x3Convolution(float* Y, float* U, float* V, float* M,
 			 float* Utmp, float* Vtmp, float* Mtmp,
 			 float* input, float* filter, int inputSize,
 			 int channels, int kernels, int tiles)
@@ -194,18 +212,18 @@ void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
 	}
     }
 
-    // TODO(louis): collapse these loops
+    int row, col;
     for (int channel = 0;
 	 channel < channels;
 	 ++channel,
 	     tilePtr += F2x2_3x3OUTPUT_TILE_SIZE * inputSize)
     {
-	for (int row = 0;
+	for (row = 0;
 	     row < inputSize - F2x2_3x3INPUT_TILE_SIZE + 1;
 	     row += F2x2_3x3OUTPUT_TILE_SIZE,
 		 tilePtr += F2x2_3x3OUTPUT_TILE_SIZE + (F2x2_3x3OUTPUT_TILE_SIZE - 1) * inputSize)
 	{
-	    for (int col = 0;
+	    for (col = 0;
 		 col < inputSize - F2x2_3x3INPUT_TILE_SIZE + 1;
 		 col += F2x2_3x3OUTPUT_TILE_SIZE,
 		     v += F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE,
@@ -223,7 +241,6 @@ void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
 		tiledCopy(d, tilePtr, inputSize);
 		matmulSlow(F2x2_3x3B_T, d, vTmp, F2x2_3x3INPUT_TILE_SIZE,
 			   F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
-
 		matmulSlow(vTmp, F2x2_3x3B, v, F2x2_3x3INPUT_TILE_SIZE,
 			   F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
 	    }
@@ -264,25 +281,29 @@ void f2x2_3x3Convolution(float* output, float* U, float* V, float* M,
     }
 
     m = M;
+    float* yColStart = Y;
     for (int kernel = 0;
 	 kernel < kernels;
 	 ++kernel)
     {
-	for (int tile = 0;
-	     tile < tiles;
-	     ++tile,
-		 output += F2x2_3x3OUTPUT_TILE_SIZE * F2x2_3x3OUTPUT_TILE_SIZE,
-		 m += F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE)
+	for (int r = 0;
+	     r < row;
+	     r += F2x2_3x3OUTPUT_TILE_SIZE,
+		 yColStart += F2x2_3x3OUTPUT_TILE_SIZE * col)
 	{
-	    // Y[k,t] = A_T * m * A
-	    // A: 4x2, m: 4x4: Y[k,t]: 2x2 (F(2x2, 3x3))
-
-	    matmulSlow(F2x2_3x3A_T, m, outputTmp, F2x2_3x3OUTPUT_TILE_SIZE,
-		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
-	    
-	    matmulSlow(outputTmp, F2x2_3x3A, output, F2x2_3x3OUTPUT_TILE_SIZE,
-		       F2x2_3x3OUTPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
-	    	    
+	    for (int c = 0;
+		 c < col;
+		 c += F2x2_3x3OUTPUT_TILE_SIZE,
+		     m += F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE)
+	    {
+		// Y[k,t] = A_T * m * A
+		// A: 4x2, m: 4x4: Y[k,t]: 2x2 (F(2x2, 3x3))
+		matmulSlow(F2x2_3x3A_T, m, AmTmp, F2x2_3x3OUTPUT_TILE_SIZE,
+			   F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
+		matmulSlow(AmTmp, F2x2_3x3A, yTmp, F2x2_3x3OUTPUT_TILE_SIZE,
+			   F2x2_3x3OUTPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
+		untile(yColStart + c, yTmp, col);
+	    }
 	}
     }
 }
