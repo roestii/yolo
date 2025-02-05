@@ -60,7 +60,7 @@ void convBnActBackward3x3s1(float* dlkernel, float* dlinput, float* dlpatches
     }
 
     // TODO(louis): Fuse matmul and col2im, according to paper
-    if (dlinput)
+    /* if (dlinput)
     {
 	matmulATransposedB(kernel, dloutput, dlpatches,
 			   nPerPatch, nPatches, outputChannels);
@@ -69,6 +69,43 @@ void convBnActBackward3x3s1(float* dlkernel, float* dlinput, float* dlpatches
     }
 
     matmulABTransposed(dloutput, patches, dlkernel,
-		       outputChannels, nPerPatch, nPatches);
+    outputChannels, nPerPatch, nPatches); */
+
+    // TODO(louis): dL/dk
+
+    for (int kernel = 0;
+	 kernel < kernels;
+	 ++kernel)
+    {
+	// TODO(louis): This is for each of the output channels of dL/dOs
+	for (int channel = 0;
+	     channel < channels;
+	     ++channel)
+	{
+	    // TODO(louis): This is for each input channel, the kernel one contributes to output channel one, it's individual kernels contribute
+	    // to the output using the corresponding input channel. Thus, kernel 1 at channel 1 is the convolution I1 * dL/dO1, at channel
+	    // 2 I2 * dL/dO1, at channel 3 I3 * dL/dO1 and so on.
+
+	    // Calculate dL/dk[kernel, channel] using I[channel] conv dL/dO[kernel] with the f(3x3, 2x2) convolution
+	}
+    }
+
+    // TODO(louis): dL/dI
+    for (int channel = 0;
+	 channel < channels;
+	 ++channel)
+    {
+	for (int kernel = 0;
+	     kernel < kernels;
+	     ++kernel)
+	{
+	    // The output/kernel channel
+	    // TODO(louis): Calculate dL/dI using the kernel at output channel kernel with the input channel channel
+	    // and add them up to dL/dI for each output channel (each input channel contributes to each output channel using the
+	    // corresponding part of the filter that is associated with the input channel, thus we have to iterate over all output channels
+	    // for each input channel and adding the losses up.
+	    // dL/dI[channel] += flipped(k[kernel, channel]) full conv dL/dO[kernel]
+	}
+    }
     
 }
