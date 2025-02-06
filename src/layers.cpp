@@ -81,6 +81,7 @@ void convolutionBackward(float* dlkernel, float* dlinput, float* dloutput, float
 {
     float* inputTileStartPtr, * dloutputTileStartPtr;
     float* dloutputChannelStartPtr = dloutput;
+    float* thing = dlkernel;
     
     // TODO(louis): dL/dk
     for (int outputChannel = 0;
@@ -94,7 +95,7 @@ void convolutionBackward(float* dlkernel, float* dlinput, float* dloutput, float
 	     inputChannel < inputChannels;
 	     ++inputChannel,
 		 inputTileStartPtr += F2x2_3x3TILE_OVERLAP * inputSize,
-		 dlkernel += F2x2_3x3FILTER_SIZE * F3x3_2x2FILTER_SIZE)
+		 dlkernel += F2x2_3x3FILTER_SIZE * F2x2_3x3FILTER_SIZE)
 	{
 	    dloutputTileStartPtr = dloutputChannelStartPtr;
 	    // TODO(louis): This is for each input channel, the kernel one contributes to output channel one, it's individual kernels contribute
@@ -104,13 +105,13 @@ void convolutionBackward(float* dlkernel, float* dlinput, float* dloutput, float
 	    // Calculate dL/dk[kernel, channel] using I[channel] conv dL/dO[kernel] with the f(3x3, 2x2) convolution (we also have to split up the
 	    // dL/dO into 2x2 tiles
 
-	    for (int row;
+	    for (int row = 0;
 		 row < outputSize;
 		 row += F2x2_3x3OUTPUT_TILE_SIZE,
 		     inputTileStartPtr += F2x2_3x3TILE_OVERLAP + (F2x2_3x3TILE_OVERLAP - 1) * inputSize,
 		     dloutputTileStartPtr += (F2x2_3x3OUTPUT_TILE_SIZE - 1) * outputSize)
 	    {
-		for (int col;
+		for (int col = 0;
 		     col < outputSize;
 		     col += F2x2_3x3OUTPUT_TILE_SIZE,
 			 inputTileStartPtr += F2x2_3x3TILE_OVERLAP,

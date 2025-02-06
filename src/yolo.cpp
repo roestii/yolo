@@ -4,7 +4,7 @@
 
 int main()
 {
-    testConvolutionForward();
+    // testConvolutionForward();
     testConvolutionBackward();
     return 0;
 }

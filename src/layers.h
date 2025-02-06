@@ -44,5 +44,5 @@
 
 // void convolutionForward(float*, float*, float*, float*, int, int, int, int, int, int);
 void convolutionBackward(float*, float*, float*, float*,
-			 float*, int, int, int, int);
-#endif
+			 float*, float*, int, int, int, int);
+#endif 

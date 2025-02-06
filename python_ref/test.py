@@ -82,6 +82,11 @@ def test_convolution_backward():
     # print("dlkernel diff: ", (dlkernel - dlkernelExpected).abs().sum())
     # print("dlinput diff: ", (dlinput - dlinputExpected).abs().sum())
 
+
+    print("dlkernel:", dlkernel)
+    print("dlinput:", dlinput)
+    print("dloutput:", dloutput)
+
     assert (dlkernel - dlkernelExpected).abs().sum() < eps
     assert (dlinput - dlinputExpected).abs().sum() < eps
 
