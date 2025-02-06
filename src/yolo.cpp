@@ -4,6 +4,7 @@
 
 int main()
 {
-    testF2x2_3x3Convolution();
+    testConvolutionForward();
+    testConvolutionBackward();
     return 0;
 }

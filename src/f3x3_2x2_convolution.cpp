@@ -40,18 +40,18 @@ static float A_T[] = {
     0, 1, -1, -1
 };
 
-static float uTmp[F3x3_2x2INPUT_TILE_SIZE * F3x3_2x2INPUT_TILE_SIZE];
-static float vTmp[F3x3_2x2INPUT_TILE_SIZE * F3x3_2x2INPUT_TILE_SIZE];
+static float Gg[F3x3_2x2INPUT_TILE_SIZE * F3x3_2x2FILTER_SIZE];
+static float B_Td[F3x3_2x2INPUT_TILE_SIZE * F3x3_2x2INPUT_TILE_SIZE];
 static float outputTmp[F3x3_2x2OUTPUT_TILE_SIZE * F3x3_2x2INPUT_TILE_SIZE];
 static float d[F3x3_2x2INPUT_TILE_SIZE * F3x3_2x2INPUT_TILE_SIZE];
 static float yTmp[F3x3_2x2OUTPUT_TILE_SIZE * F3x3_2x2OUTPUT_TILE_SIZE];
-static float AmTmp[F3x3_2x2OUTPUT_TILE_SIZE * F3x3_2x2INPUT_TILE_SIZE];
+static float A_Tm[F3x3_2x2OUTPUT_TILE_SIZE * F3x3_2x2INPUT_TILE_SIZE];
 
 // TODO(louis): We need matrices U, V, and M that fit all of the us, vs, and ms.
 // Should we determine the maximum size needed for U and V for every convolution,
 // and just hand them to the function? Probably yes
 
-static void tiledCopy(float* tile, float* input, int inputSize)
+/* static void tiledCopy(float* tile, float* input, int inputSize)
 {
     // TODO(louis): We could hand roll this completely and use simd registers
     for (int row = 0;
@@ -100,8 +100,46 @@ static void tileElementReduce2d(float* output, float* input, int nDim1,
 	}
     }
 }
+*/
 
-void f3x3_2x2Convolution(float* Y, float* U, float* V, float* M,
+static float GgG_T[F3x3_2x2INPUT_TILE_SIZE * F3x3_2x2INPUT_TILE_SIZE];
+static float B_TdB[F3x3_2x2INPUT_TILE_SIZE * F3x3_2x2INPUT_TILE_SIZE];
+static float A_TM[F3x3_2x2OUTPUT_TILE_SIZE * F3x3_2x2INPUT_TILE_SIZE];
+// static float A_TMA[F3x3_2x2OUTPUT_TILE_SIZE * F3x3_2x2OUTPUT_TILE_SIZE];
+
+void f3x3_2x2SingleTileConvolution(float* Y, float* inputTile, float* kernel)
+{
+    // This method is used for the backward pass where we perform a convolution with
+    // a single input tile that has one channel and a single kernel with one channel as well.
+    // The output is given by Y = A^T ((G g G^T) * (B.T d B)) A
+    matmulSlow(G, kernel, Gg, F3x3_2x2INPUT_TILE_SIZE,
+	       F3x3_2x2FILTER_SIZE, F3x3_2x2FILTER_SIZE);
+    matmulSlow(Gg, G_T, GgG_T, F3x3_2x2INPUT_TILE_SIZE,
+	       F3x3_2x2INPUT_TILE_SIZE, F3x3_2x2FILTER_SIZE);
+    matmulSlow(B_T, inputTile, B_Td, F3x3_2x2INPUT_TILE_SIZE,
+	       F3x3_2x2INPUT_TILE_SIZE, F3x3_2x2INPUT_TILE_SIZE);
+    matmulSlow(B_Td, B, B_TdB, F3x3_2x2INPUT_TILE_SIZE,
+	       F3x3_2x2INPUT_TILE_SIZE, F3x3_2x2INPUT_TILE_SIZE);
+
+    // TODO(louis): simd for this element wise multiply
+    float* m = GgG_T;
+    float* b = B_TdB;
+    for (int i = 0;
+	 i < F3x3_2x2INPUT_TILE_SIZE * F3x3_2x2INPUT_TILE_SIZE;
+	 ++i, ++m, ++b)
+    {
+	*m *= *b;
+    }
+    
+    m = GgG_T;
+    matmulSlow(A_T, m, A_TM, F3x3_2x2OUTPUT_TILE_SIZE,
+	       F3x3_2x2INPUT_TILE_SIZE, F3x3_2x2INPUT_TILE_SIZE);
+    matmulSlow(A_TM, A, Y, F3x3_2x2OUTPUT_TILE_SIZE,
+	       F3x3_2x2OUTPUT_TILE_SIZE, F3x3_2x2INPUT_TILE_SIZE);
+    // untile(Y, A_TMA, outputSize);
+}
+
+/* void f3x3_2x2Convolution(float* Y, float* U, float* V, float* M,
 			 float* Utmp, float* Vtmp, float* Mtmp,
 			 float* input, float* filter, int inputSize,
 			 int channels, int kernels, int tiles)
@@ -151,11 +189,11 @@ void f3x3_2x2Convolution(float* Y, float* U, float* V, float* M,
 	    // u = G * g[k,c] * G^T
 	    // G: 4x3, g[k,c]: 3x3 -> u: 4x4
 	    // U: k * c * 4 * 4
-	    matmulSlow(G, g, uTmp,
+	    matmulSlow(G, g, Gg,
 		       F3x3_2x2INPUT_TILE_SIZE, F3x3_2x2FILTER_SIZE,
 		       F3x3_2x2FILTER_SIZE);
 
-	    matmulSlow(uTmp, G_T, u,
+	    matmulSlow(Gg, G_T, u,
 		       F3x3_2x2INPUT_TILE_SIZE, F3x3_2x2INPUT_TILE_SIZE,
 		       F3x3_2x2FILTER_SIZE);
 	}
@@ -188,9 +226,9 @@ void f3x3_2x2Convolution(float* Y, float* U, float* V, float* M,
 		// V: c * t * 4 * 4
 
 		tiledCopy(d, tilePtr, inputSize);
-		matmulSlow(B_T, d, vTmp, F3x3_2x2INPUT_TILE_SIZE,
+		matmulSlow(B_T, d, B_Td, F3x3_2x2INPUT_TILE_SIZE,
 			   F3x3_2x2INPUT_TILE_SIZE, F3x3_2x2INPUT_TILE_SIZE);
-		matmulSlow(vTmp, B, v, F3x3_2x2INPUT_TILE_SIZE,
+		matmulSlow(B_Td, B, v, F3x3_2x2INPUT_TILE_SIZE,
 			   F3x3_2x2INPUT_TILE_SIZE, F3x3_2x2INPUT_TILE_SIZE);
 	    }
 	}
@@ -246,12 +284,13 @@ void f3x3_2x2Convolution(float* Y, float* U, float* V, float* M,
 	    {
 		// Y[k,t] = A_T * m * A
 		// A: 4x2, m: 4x4: Y[k,t]: 2x2 (F(2x2, 3x3))
-		matmulSlow(A_T, m, AmTmp, F3x3_2x2OUTPUT_TILE_SIZE,
+		matmulSlow(A_T, m, A_Tm, F3x3_2x2OUTPUT_TILE_SIZE,
 			   F3x3_2x2INPUT_TILE_SIZE, F3x3_2x2INPUT_TILE_SIZE);
-		matmulSlow(AmTmp, A, yTmp, F3x3_2x2OUTPUT_TILE_SIZE,
+		matmulSlow(A_Tm, A, yTmp, F3x3_2x2OUTPUT_TILE_SIZE,
 			   F3x3_2x2OUTPUT_TILE_SIZE, F3x3_2x2INPUT_TILE_SIZE);
 		untile(Y + c, yTmp, col);
 	    }
 	}
     }
 }
+*/

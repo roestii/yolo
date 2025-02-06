@@ -2,8 +2,13 @@
 #define LAYERS_H
 
 #include "types.h"
-#include "algebra.h"
-#include "image.h"
+#include "f2x2_3x3_convolution.h"
+#include "f3x3_2x2_convolution.h"
+
+#define BATCH_SIZE 32
+#define NEGATIVE_SLOPE -1e-2
+
+#define PADDING F2x2_3x3FILTER_SIZE - 1
 
 /* #define LEAKY_RELU(x) x >= 0 ? x : x * 1e-2
 #define N_PATCHES_DIM(inputSize, kernelSize, padding, kernelStride) \
@@ -37,7 +42,7 @@
 */
 
 
-void convolutionForward(float*, float*, float*, float*, int, int, int, int, int, int);
-void convolutionBackward();
-
+// void convolutionForward(float*, float*, float*, float*, int, int, int, int, int, int);
+void convolutionBackward(float*, float*, float*, float*,
+			 float*, int, int, int, int);
 #endif

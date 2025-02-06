@@ -40,12 +40,12 @@ static float A_T[] = {
     0, 1, -1, -1
 };
 
-static float uTmp[F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
-static float vTmp[F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
+static float Gg[F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3FILTER_SIZE];
+static float B_Td[F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
 static float outputTmp[F2x2_3x3OUTPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
 static float d[F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
 static float yTmp[F2x2_3x3OUTPUT_TILE_SIZE * F2x2_3x3OUTPUT_TILE_SIZE];
-static float AmTmp[F2x2_3x3OUTPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
+static float A_Tm[F2x2_3x3OUTPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
 
 // TODO(louis): We need matrices U, V, and M that fit all of the us, vs, and ms.
 // Should we determine the maximum size needed for U and V for every convolution,
@@ -101,6 +101,42 @@ static void tileElementReduce2d(float* output, float* input, int nDim1,
     }
 }
 
+static float GgG_T[F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
+static float B_TdB[F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
+static float A_TM[F2x2_3x3OUTPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE];
+
+void f2x2_3x3SingleTileConvolution(float* Y, float* inputTile, float* kernel)
+{
+    // This method is used for the backward pass where we perform a convolution with
+    // a single input tile that has one channel and a single kernel with one channel as well.
+    // The output is given by Y = A^T ((G g G^T) * (B.T d B)) A
+
+    matmulSlow(G, kernel, Gg, F2x2_3x3INPUT_TILE_SIZE,
+	       F2x2_3x3FILTER_SIZE, F2x2_3x3FILTER_SIZE);
+    matmulSlow(Gg, G_T, GgG_T, F2x2_3x3INPUT_TILE_SIZE,
+	       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3FILTER_SIZE);
+    matmulSlow(B_T, inputTile, B_Td, F2x2_3x3INPUT_TILE_SIZE,
+	       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
+    matmulSlow(B_Td, B, B_TdB, F2x2_3x3INPUT_TILE_SIZE,
+	       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
+
+    // TODO(louis): simd for this element wise multiply
+    float* gTmp = GgG_T;
+    float* bTmp = B_TdB;
+    for (int i = 0;
+	 i < F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE;
+	 ++i, ++gTmp, ++bTmp)
+    {
+	*gTmp *= *bTmp;
+    }
+    
+    float* M = GgG_T;
+    matmulSlow(A_T, M, A_TM, F2x2_3x3OUTPUT_TILE_SIZE,
+	       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
+    matmulSlow(A_TM, A, Y, F2x2_3x3OUTPUT_TILE_SIZE,
+	       F2x2_3x3OUTPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
+}
+
 void f2x2_3x3Convolution(float* Y, float* U, float* V, float* M,
 			 float* Utmp, float* Vtmp, float* Mtmp,
 			 float* input, float* filter, int inputSize,
@@ -148,11 +184,11 @@ void f2x2_3x3Convolution(float* Y, float* U, float* V, float* M,
 	    // u = G * g[k,c] * G^T
 	    // G: 4x3, g[k,c]: 3x3 -> u: 4x4
 	    // U: k * c * 4 * 4
-	    matmulSlow(G, g, uTmp,
+	    matmulSlow(G, g, Gg,
 		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3FILTER_SIZE,
 		       F2x2_3x3FILTER_SIZE);
 
-	    matmulSlow(uTmp, G_T, u,
+	    matmulSlow(Gg, G_T, u,
 		       F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE,
 		       F2x2_3x3FILTER_SIZE);
 	}
@@ -185,9 +221,9 @@ void f2x2_3x3Convolution(float* Y, float* U, float* V, float* M,
 		// V: c * t * 4 * 4
 
 		tiledCopy(d, tilePtr, inputSize);
-		matmulSlow(B_T, d, vTmp, F2x2_3x3INPUT_TILE_SIZE,
+		matmulSlow(B_T, d, B_Td, F2x2_3x3INPUT_TILE_SIZE,
 			   F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
-		matmulSlow(vTmp, B, v, F2x2_3x3INPUT_TILE_SIZE,
+		matmulSlow(B_Td, B, v, F2x2_3x3INPUT_TILE_SIZE,
 			   F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
 	    }
 	}
@@ -243,9 +279,9 @@ void f2x2_3x3Convolution(float* Y, float* U, float* V, float* M,
 	    {
 		// Y[k,t] = A_T * m * A
 		// A: 4x2, m: 4x4: Y[k,t]: 2x2 (F(2x2, 3x3))
-		matmulSlow(A_T, m, AmTmp, F2x2_3x3OUTPUT_TILE_SIZE,
+		matmulSlow(A_T, m, A_Tm, F2x2_3x3OUTPUT_TILE_SIZE,
 			   F2x2_3x3INPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
-		matmulSlow(AmTmp, A, yTmp, F2x2_3x3OUTPUT_TILE_SIZE,
+		matmulSlow(A_Tm, A, yTmp, F2x2_3x3OUTPUT_TILE_SIZE,
 			   F2x2_3x3OUTPUT_TILE_SIZE, F2x2_3x3INPUT_TILE_SIZE);
 		untile(Y + c, yTmp, col);
 	    }

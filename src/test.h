@@ -2,7 +2,7 @@
 #define TEST_DATA_H
 
 #include "f2x2_3x3_convolution.h"
-#include "f3x3_2x2_convolution.h"
+#include "layers.h"
 #include <math.h>
 
 #define TEST_FILTER_CHANNELS 3
@@ -68,7 +68,7 @@ static float testKernel[] = {
      -1.8185
 };
 
-void testF2x2_3x3Convolution()
+void testConvolutionForward()
 {
     float output[TEST_FILTER_CHANNELS * TEST_TILES *
 			F2x2_3x3OUTPUT_TILE_SIZE * F2x2_3x3OUTPUT_TILE_SIZE] = {0};
@@ -82,7 +82,7 @@ void testF2x2_3x3Convolution()
     float Vtmp[TEST_IMAGE_CHANNELS * TEST_TILES] = {0};
     float Mtmp[TEST_FILTER_CHANNELS * TEST_TILES] = {0};
 
-    float expected[sizeof(output) / sizeof(float)] = {
+    float expected[] = {
 	-0.0227,  3.1503,  2.2196, -0.1066,  2.3752,  4.3258,
 	-4.4585,  3.2144,  2.9045, -0.7439, -1.7257, -3.7768,
 	-1.4922,  2.7987, -0.6163,  3.1156, -0.4098,  1.2584,
@@ -115,7 +115,44 @@ void testF2x2_3x3Convolution()
     }
 }
 
-void testF3x3_2x2Convolution()
+#define PADDED_SIZE (TEST_OUTPUT_SIZE + 2 * PADDING)
+
+void testConvolutionBackward()
+{
+    static float input[TEST_INPUT_CHANNELS * TEST_INPUT_SIZE * TEST_INPUT_SIZE] = {
+    };
+    static float kernel[TEST_OUTPUT_CHANNELS * F2x2_3x3FILTER_SIZE * F2x2_3x3FILTER_SIZE] = {
+    };
+    static float dloutput[TEST_OUTPUT_CHANNELS * TEST_OUTPUT_SIZE * TEST_OUTPUT_SIZE] = {
+    };
+    static float paddeddloutput[TEST_OUTPUT_CHANNELS * PADDED_SIZE * PADDED_SIZE] = {0};
+    static float dlinput[sizeof(input) / sizeof(float)] = {
+    };
+    static float dlkernel[sizeof(kernel) / sizeof(float)] = {
+    };
+    static float dlinputExpected[sizeof(input) / sizeof(float)] = {
+    };
+    static float dlkernelExpected[sizeof(kernel) / sizeof(float)] = {
+    };
+
+    convolutionBackward(dlinput, dlkernel, dloutput, paddeddloutput, kernel, input,
+			TEST_INPUT_CHANNELS, TEST_INPUT_SIZE, TEST_OUTPUT_CHANNELS, TEST_OUTPUT_SIZE);
+    for (int i = 0;
+	 i < sizeof(dlkernel) / sizeof(float);
+	 ++i)
+    {
+	assert(abs(dlkernel[i] - dlkernelExpected[i]) < EPS);
+    }
+
+    for (int i = 0;
+	 i < sizeof(dlinput) / sizeof(float);
+	 ++i)
+    {
+	assert(abs(dlinput[i] - dlinputExpected[i]) < EPS);
+    }
+}
+
+/* void testF3x3_2x2Convolution()
 {
     float output[TEST_FILTER_CHANNELS * TEST_TILES *
 			F3x3_2x2OUTPUT_TILE_SIZE * F3x3_2x2OUTPUT_TILE_SIZE] = {0};
@@ -161,5 +198,6 @@ void testF3x3_2x2Convolution()
 	assert(abs(output[i] - expected[i]) < EPS);
     }
 }
+*/
 
 #endif
