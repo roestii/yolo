@@ -1,37 +1,32 @@
 #include "layers.h"
 
-
-/*
-void convBnActForward3x3s1(float* activation, float* output, float* input, float* patches,
-			   float* kernel, int inputChannels, int inputSize,
-			   int outputChannels, int kernelSize, int kernelStride,
-			   int nPatches, int nPerPatch)
+void batchNormalization(float* output, float* input, int inputChannels, int inputSize)
 {
-    // TODO(louis): Fuse imageToColumns and matmul according to the paper
-    // Since we only use 3 x 3 kernels with a stride of 1 the winograd algorithm (lavin & gray) can be nice here.
-    imageToColumns(patches, input, inputSize,
-		   inputChannels, kernelSize,
-		   kernelStride);
-
-    matmulSlow(kernel, patches, output,
-	       outputChannels, nPatches,
-	       nPerPatch);
-
-    for (int i = 0;
-	 i < outputChannels * nPatches;
-	 ++i, ++output, ++activation)
+    for (int b = 0;
+	 b < BATCH_SIZE;
+	 ++b)
     {
-	if (*output >= 0)
-	{
-	    *activation = *output;
-	}
-	else
-	{
-	    *activation = *output * NEGATIVE_SLOPE;
-	}
     }
 }
-*/
+
+void convolutionForward(float* output, float* input, float* kernel,
+			float* U, float* V, float* M, float* Utmp, float* Vtmp, float* Mtmp,
+			int inputChannels, int inputSize, int outputChannels, int outputSize, int tiles)
+{
+    // input is of size BATCH_SIZE * inputChannels * inputSize ** 2
+    // output is of size BATCH_SIZE * outputChannels * (inputSize - F2x2_3x3FILTER_SIZE + 1) ** 2
+    // TODO(louis): Maybe parallelize this
+    for (int b = 0;
+	 b < BATCH_SIZE;
+	 ++b,
+	     input += inputChannels * inputSize * inputSize,
+	     output += outputChannels * outputSize * outputSize)
+    {
+	f2x2_3x3Convolution(output, U, V, M, Utmp, Vtmp, Mtmp,
+			    input, kernel, inputSize, inputChannels,
+			    outputChannels, tiles);
+    }
+}
 
 static void flip(float* dest, float* src)
 {
@@ -81,6 +76,7 @@ static float flippedKernel[F2x2_3x3FILTER_SIZE * F2x2_3x3FILTER_SIZE];
 void convolutionBackward(float* dlkernel, float* dlinput, float* dloutput, float* paddeddloutput, float* kernel,
 			 float* input, int inputChannels, int inputSize, int outputChannels, int outputSize)
 {
+    // TODO(louis): Make this batched
     float* inputTileStartPtr, * dloutputTileStartPtr;
     float* dloutputChannelStartPtr = dloutput;
     float* thing = dlkernel;

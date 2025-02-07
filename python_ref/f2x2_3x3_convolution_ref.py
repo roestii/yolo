@@ -1,4 +1,31 @@
-import torch
+import numpy
+
+# The input corresponds to a singular tile of size alpha
+def simplified_f2x2_3x3_convolution(input, kernel):
+    m = 2
+    r = 3
+    alpha = m + r - 1
+
+    C = input.shape[0]
+    K = kernel.shape[0]
+    P = (input.shape[-1] - r + 1) ** 2 // 4
+        
+    B = numpy.array([1.0, 0.0,  0.0,  0.0,
+                      0.0, 1.0, -1.0,  1.0,
+                      -1.0, 1.0,  1.0,  0.0,
+                      0.0, 0.0,  0.0, -1.0]).reshape(4, 4)
+    G = numpy.array([1.0,  0.0, 0.0,
+                      0.5,  0.5, 0.5,
+                      0.5, -0.5, 0.5,
+                      0.0,  0.0, 1.0]).reshape(4, 3)
+    A = numpy.array([1.0,  0.0,
+                     1.0,  1.0,
+                     1.0, -1.0,
+                     0.0, -1.0]).reshape(4, 2)
+
+    Y = A.T @ ((G @ kernel @ G.T) * (B.T @ input @ B)) @ A
+    return Y
+
 
 def f2x2_3x3_convolution(input, kernel):
     m = 2
@@ -9,35 +36,35 @@ def f2x2_3x3_convolution(input, kernel):
     K = kernel.shape[0]
     P = (input.shape[-1] - r + 1) ** 2 // 4
         
-    B = torch.tensor([1.0, 0.0,  0.0,  0.0,
-                      0.0, 1.0, -1.0,  1.0,
-                      -1.0, 1.0,  1.0,  0.0,
-                      0.0, 0.0,  0.0, -1.0]).reshape(4, 4)
-    G = torch.tensor([1.0,  0.0, 0.0,
-                      0.5,  0.5, 0.5,
-                      0.5, -0.5, 0.5,
-                      0.0,  0.0, 1.0]).reshape(4, 3)
-    A = torch.tensor([1.0,  0.0,
-                      1.0,  1.0,
-                      1.0, -1.0,
-                      0.0, -1.0]).reshape(4, 2)
+    B = numpy.array([1.0, 0.0,  0.0,  0.0,
+                     0.0, 1.0, -1.0,  1.0,
+                     -1.0, 1.0,  1.0,  0.0,
+                     0.0, 0.0,  0.0, -1.0]).reshape(4, 4)
+    G = numpy.array([1.0,  0.0, 0.0,
+                     0.5,  0.5, 0.5,
+                     0.5, -0.5, 0.5,
+                     0.0,  0.0, 1.0]).reshape(4, 3)
+    A = numpy.array([1.0,  0.0,
+                     1.0,  1.0,
+                     1.0, -1.0,
+                     0.0, -1.0]).reshape(4, 2)
     
-    U = torch.zeros(K, C, alpha, alpha)
-    V = torch.zeros(C, P, alpha, alpha)
-    M = torch.zeros(K, P, alpha, alpha)
-    # TODO(louis): check the size of the C implementation here as well
-    Y = torch.zeros(K, P, m, m)
+    U = numpy.zeros((K, C, alpha, alpha))
+    V = numpy.zeros((C, P, alpha, alpha))
+    M = numpy.zeros((K, P, alpha, alpha))
+    outputSize = input.shape[-1] - r + 1
+    Y = numpy.zeros((K, outputSize, outputSize), dtype=numpy.float32)
 
     for k in range(K):
         for c in range(C):
             g = kernel[k, c]
             U[k, c] = G @ g @ G.T
-    # TODO(louis): there is a bug here, how do we get the tile indices?
+   
     for c in range(C):
         b = 0
-        for x in range(0, input.shape[-1] - alpha + 1, m):
-            for y in range(0, input.shape[-1] - alpha + 1, m):
-                d = input[c, x:x+alpha, y:y+alpha]
+        for row in range(0, input.shape[-1] - alpha + 1, m):
+            for col in range(0, input.shape[-1] - alpha + 1, m):
+                d = input[c, row:row+alpha, col:col+alpha]
                 V[c, b] = B.T @ d @ B
                 b += 1
 
@@ -46,10 +73,10 @@ def f2x2_3x3_convolution(input, kernel):
             M[:, :, eps, ups] = U[:, :, eps, ups] @ V[:, :, eps, ups]
 
     for k in range(K):
-        for b in range(P):
-            m = M[k, b]
-            Y[k, b] = A.T @ M[k, b] @ A
-
-    breakpoint()
+        b = 0
+        for row in range(0, input.shape[-1] - alpha + 1, m):
+            for col in range(0, input.shape[-1] - alpha + 1, m):
+                Y[k, row:row+m, col:col+m] = A.T @ M[k, b] @ A
+                b += 1
 
     return Y
