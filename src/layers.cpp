@@ -35,6 +35,7 @@ void convBnActForward3x3s1(float* activation, float* output, float* input, float
 
 static void flip(float* dest, float* src)
 {
+    dest += F2x2_3x3FILTER_SIZE * F2x2_3x3FILTER_SIZE - 1;
     for (int i = 0;
 	 i < F2x2_3x3FILTER_SIZE * F2x2_3x3FILTER_SIZE;
 	 ++i, ++src, --dest)
@@ -49,19 +50,20 @@ static void pad(float* output, float* input, int inputChannels, int inputSize, i
     // input: inputChannels, inputsize, inputSize
     // output: inputChannels, inputSize + 2 * PADDING, inputSize + 2 * PADDING
     // The padding is defined as filterSize - 1
-     for (int c = 0;
+    output += PADDING * (outputSize + 1);
+    for (int c = 0;
 	 c < inputChannels;
-	 ++c, output += PADDING * outputSize)
+	 ++c, output += 2 * PADDING * outputSize)
     {
 	for (int i = 0;
 	     i < inputSize;
-	     ++i, output += outputSize)
+	     ++i, output += 2 * PADDING)
 	{
 	    for (int j = 0;
 		 j < inputSize;
-		 ++j, ++input)
+		 ++j, ++input, ++output)
 	    {
-		*(output + j) = *input;
+		*output = *input;
 	    }
 	}
     }
@@ -188,13 +190,13 @@ void convolutionBackward(float* dlkernel, float* dlinput, float* dloutput, float
 	    dlinputTileStartPtr = dlinput;
 	    flip(flippedKernel, kernelPtr);
 	    for (int row = 0;
-		 row < paddeddloutputSize;
+		 row < paddeddloutputSize - F2x2_3x3FILTER_SIZE + 1;
 		 row += F2x2_3x3TILE_OVERLAP,
 		     paddeddloutputTileStartPtr += F2x2_3x3TILE_OVERLAP + (F2x2_3x3TILE_OVERLAP - 1) * paddeddloutputSize,
 		     dlinputTileStartPtr += (F2x2_3x3OUTPUT_TILE_SIZE - 1) * inputSize)
 	    {
 		for (int col = 0;
-		     col < paddeddloutputSize;
+		     col < paddeddloutputSize - F2x2_3x3FILTER_SIZE + 1;
 		     col += F2x2_3x3TILE_OVERLAP,
 			 paddeddloutputTileStartPtr += F2x2_3x3TILE_OVERLAP,
 			 dlinputTileStartPtr += F2x2_3x3OUTPUT_TILE_SIZE)
@@ -226,7 +228,7 @@ void convolutionBackward(float* dlkernel, float* dlinput, float* dloutput, float
 			     j < F2x2_3x3OUTPUT_TILE_SIZE;
 			     ++j, ++src)
 			{
-			    *(dest + j) = *src;
+			    *(dest + j) += *src;
 			}
 		    }
 		}

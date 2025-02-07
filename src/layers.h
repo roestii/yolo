@@ -8,7 +8,7 @@
 #define BATCH_SIZE 32
 #define NEGATIVE_SLOPE -1e-2
 
-#define PADDING F2x2_3x3FILTER_SIZE - 1
+#define PADDING (F2x2_3x3FILTER_SIZE - 1)
 
 /* #define LEAKY_RELU(x) x >= 0 ? x : x * 1e-2
 #define N_PATCHES_DIM(inputSize, kernelSize, padding, kernelStride) \

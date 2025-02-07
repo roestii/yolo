@@ -205,7 +205,7 @@ void testConvolutionBackward()
 	-5.5098,   7.6394,  -2.7358,   4.6973,   4.6495,  -6.2900,
 	-18.0947,  -8.4371,  -4.5465,   6.0340,  -1.5091, -10.3662
     };
-    static float paddeddloutput[TEST_OUTPUT_CHANNELS * PADDED_SIZE * PADDED_SIZE] = {0};
+    float paddeddloutput[TEST_OUTPUT_CHANNELS * PADDED_SIZE * PADDED_SIZE] = {0};
     float dlinput[sizeof(input) / sizeof(float)] = {0};
     float dlkernel[sizeof(kernel) / sizeof(float)] = {0};
     static float dlinputExpected[sizeof(input) / sizeof(float)] = {

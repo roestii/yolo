@@ -51,6 +51,7 @@ def convolution_backward(dloutput, input, kernel):
                 for tileCol in range(0, input.shape[-1], m):
                     dloutputTile = paddeddloutput[outputChannel, tileRow:tileRow+alpha, tileCol:tileCol+alpha]
                     flippedKernel = kernel[outputChannel, inputChannel].rot90().rot90()
+                    breakpoint()
                     dlinput[inputChannel, tileRow:tileRow+m, tileCol:tileCol+m] += simplified_f2x2_3x3_convolution(dloutputTile, flippedKernel)
 
     return dlkernel, dlinput
