@@ -110,7 +110,6 @@ void f2x2_3x3SingleTileConvolution(float* Y, float* inputTile, float* kernel)
     // This method is used for the backward pass where we perform a convolution with
     // a single input tile that has one channel and a single kernel with one channel as well.
     // The output is given by Y = A^T ((G g G^T) * (B.T d B)) A
-
     matmulSlow(G, kernel, Gg, F2x2_3x3INPUT_TILE_SIZE,
 	       F2x2_3x3FILTER_SIZE, F2x2_3x3FILTER_SIZE);
     matmulSlow(Gg, G_T, GgG_T, F2x2_3x3INPUT_TILE_SIZE,
