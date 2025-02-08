@@ -7,12 +7,13 @@ def load(name):
     with open(name, "rb") as f:
         return numpy.load(f)
 
-testMiniBatch = load("data/testMiniBatch.npy")
-testKernel = load("data/testKernel.npy")
-testOutput = load("data/testOutput.npy")
-dlTestMiniBatch = load("data/dlTestMiniBatch.npy")
-dlTestKernel = load("data/dlTestKernel.npy")
-dlTestOutput = load("data/dlTestOutput.npy")
+testMiniBatch = load("../data/testMiniBatch.npy")
+testKernel = load("../data/testKernel.npy")
+testOutput = load("../data/testOutput.npy")
+dlTestMiniBatch = load("../data/dlTestMiniBatch.npy")
+dlTestKernel = load("../data/dlTestKernel.npy")
+dlTestOutput = load("../data/dlTestOutput.npy")
+breakpoint()
 
 def test_convolution_backward():
     dlkernel, dlinput = convolution_backward(dlTestOutput, testMiniBatch, testKernel)

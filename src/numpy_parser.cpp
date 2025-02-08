@@ -2,9 +2,11 @@
 #include "types.h"
 #include <unistd.h>
 #include <stdio.h>
+#include <fcntl.h>
 
 #define PREFIX "\x93" "NUMPY"
-#define MIN_SIZE sizeof(PREFIX) + 4
+#define PREFIX_LEN (sizeof(PREFIX) - 1)
+#define MIN_SIZE (PREFIX_LEN + 4)
 #define Align16(x) (x + 15) & ~15
 
 static int memeql(char* a, char* b, int size)
@@ -21,14 +23,14 @@ static int memeql(char* a, char* b, int size)
     return 1;
 }
 
-int load(char* fileName, float* buffer, int size)
+int load(char* fileName, float* output, int size)
 {
     int retval = 0;
-    u32 value;
+    int value = 0;
     int bytesLeft;
     u8 minor, major;
     u16 headerLen;
-    char* dataStart;
+    u8* dataStart;
     int fd = open(fileName, O_RDONLY);
     if (fd == -1)
     {
@@ -45,15 +47,15 @@ int load(char* fileName, float* buffer, int size)
 	goto clean_up;
     }
 
-    if (!memeql(buffer, PREFIX, sizeof(PREFIX)))
+    if (!memeql(buffer, (char*) PREFIX, PREFIX_LEN))
     {
 	fprintf(stderr, "Encountered malformed file.\n");
 	retval = -1;
 	goto clean_up;
     }
 
-    major = buffer[sizeof(PREFIX)];
-    minor = buffer[sizeof(PREFIX) + 1];
+    major = buffer[PREFIX_LEN];
+    minor = buffer[PREFIX_LEN + 1];
     if (major != 1)
     {
 	fprintf(stderr, "Unsupported version of the npy format.\n");
@@ -61,16 +63,16 @@ int load(char* fileName, float* buffer, int size)
 	goto clean_up;
     }
     
-    headerLen = buffer[sizeof(PREFIX) + 2] + buffer[sizeof(PREFIX) + 3] << 8;
+    headerLen = buffer[PREFIX_LEN + 2] + (buffer[PREFIX_LEN + 3] << 8);
     bytesLeft = n - MIN_SIZE - headerLen;
-    if (bytesLeft <= 0 && MIN_SIZE + headerLen & 15 == 0)
+    if (bytesLeft <= 0 && (MIN_SIZE + headerLen & 15) == 0)
     {
 	fprintf(stderr, "Encountered malformed file.\n");
 	retval = -1;
 	goto clean_up;
     }
 
-    dataStart = buffer + MIN_SIZE + headerLen;
+    dataStart = (u8*) buffer + MIN_SIZE + headerLen;
     if (*(dataStart - 1) != '\n')
     {
 	fprintf(stderr, "Encountered malformed file.\n");
@@ -82,11 +84,11 @@ int load(char* fileName, float* buffer, int size)
     {
 	for (int i = 0;
 	     i < bytesLeft;
-	     i += 4, dataStart += 4, ++buffer)
+	     i += 4, dataStart += 4, ++output)
 	{
-	    value = *dataStart + *(dataStart + 1) << 8 +
-		*(dataStart + 2) << 16 + *(dataStart + 3) << 24;
-	    *buffer = *(float*) value;
+	    value = *dataStart | (*(dataStart + 1) << 8) |
+		(*(dataStart + 2) << 16) | (*(dataStart + 3) << 24);
+	    *output = *(float*) &value;
 	}
 
 	bytesLeft = read(fd, buffer, sizeof(buffer));
@@ -98,7 +100,7 @@ int load(char* fileName, float* buffer, int size)
 	{
 	    fprintf(stderr, "Error while reading file.\n");
 	}
-	dataStart = buffer;
+	dataStart = (u8*) buffer;
     }
 
 clean_up:

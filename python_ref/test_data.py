@@ -10,7 +10,7 @@ OUTPUT_CHANNELS = 4
 
 def save(name, arr):
     with open(name, "wb") as f:
-        numpy.save(f, arr.numpy(), allow_pickle=False)
+        numpy.save(f, arr.numpy().astype(numpy.float32), allow_pickle=False)
 
 def main():
     testMiniBatch = torch.randn(BATCH_SIZE, INPUT_CHANNELS,
@@ -34,12 +34,12 @@ def main():
     dlTestKernel = testKernel.grad.clone()
 
     with torch.no_grad():
-        save("data/testMiniBatch.npy", testMiniBatch)
-        save("data/testKernel.npy", testKernel)
-        save("data/testOutput.npy", testOutput)
-        save("data/dlTestOutput.npy", dlTestOutput)
-        save("data/dlTestMiniBatch.npy", dlTestMiniBatch)
-        save("data/dlTestKernel.npy", dlTestKernel)
+        save("../data/testMiniBatch.npy", testMiniBatch)
+        save("../data/testKernel.npy", testKernel)
+        save("../data/testOutput.npy", testOutput)
+        save("../data/dlTestOutput.npy", dlTestOutput)
+        save("../data/dlTestMiniBatch.npy", dlTestMiniBatch)
+        save("../data/dlTestKernel.npy", dlTestKernel)
 
 if __name__ == "__main__":
     main()

@@ -2,6 +2,9 @@
 #include "layers.h"
 #include "arena.h"
 
+#include <sys/mman.h>
+#include <stdio.h>
+
 #define BATCH_SIZE 32
 #define KERNEL_SIZE 3
 #define INPUT_CHANNELS 3
@@ -19,13 +22,13 @@
 #define M_SIZE OUTPUT_CHANNELS * TILES * F2x2_3x3INPUT_TILE_SIZE * F2x2_3x3INPUT_TILE_SIZE
 #define UTMP_SIZE OUTPUT_CHANNELS * INPUT_CHANNELS
 #define VTMP_SIZE INPUT_CHANNELS * TILES
-#define MTMP_SEIZE OUTPUT_CHANNELS * TILES
+#define MTMP_SIZE OUTPUT_CHANNELS * TILES
 
 // TODO(louis): We need additional memory here and we might want to page align this
 #define MEMORY 3 * (TEST_KERNEL_SIZE + TEST_MINI_BATCH_SIZE + TEST_OUTPUT_SIZE) \
     + U_SIZE + V_SIZE + M_SIZE + UTMP_SIZE + VTMP_SIZE + MTMP_SIZE
 
-int testConvolutionForward(float* input, float* output, )
+/*int testConvolutionForward(float* input, float* output, )
 {
     convolutionForward();
     for (int i = 0;
@@ -35,10 +38,12 @@ int testConvolutionForward(float* input, float* output, )
 	assert(abs(output[i] - expected[i]) < EPS);
     }
 }
+*/
 
 int testConvolutionBackward()
 {
-    convolutionBackward();
+    // convolutionBackward();
+    return 0;
 }
 
 int main()
@@ -54,7 +59,7 @@ int main()
     initArena(&a, (uintptr) start, MEMORY);
     float* testKernel = (float*) pushSize(&a, TEST_KERNEL_SIZE);
     float* testMiniBatch = (float*) pushSize(&a, TEST_MINI_BATCH_SIZE);
-    float* testOutput = (float*) pushSize(&a, TEST_OUTPUT);
+    float* testOutput = (float*) pushSize(&a, TEST_OUTPUT_SIZE);
     float* dlTestKernel = (float*) pushSize(&a, TEST_KERNEL_SIZE);
     float* dlTestMiniBatch = (float*) pushSize(&a, TEST_MINI_BATCH_SIZE);
     float* dlTestOutput = (float*) pushSize(&a, TEST_OUTPUT_SIZE);
@@ -64,18 +69,18 @@ int main()
     float* computedDlKernel = (float*) pushSize(&a, TEST_KERNEL_SIZE);
 
     float* U = (float*) pushSize(&a, U_SIZE);
-    float* V = (float*) pushSize(&a V_SIZE);
+    float* V = (float*) pushSize(&a, V_SIZE);
     float* M = (float*) pushSize(&a, M_SIZE);
     float* Utmp = (float*) pushSize(&a, UTMP_SIZE);
     float* Vtmp = (float*) pushSize(&a, VTMP_SIZE);
     float* Mtmp = (float*) pushSize(&a, MTMP_SIZE);
 
-    assert(load("data/testKernel", testKernel, TEST_KERNEL_SIZE) == 0);
-    assert(load("data/testMiniBatch", testMiniBatch, TEST_MINI_BATCH_SIZE) == 0);
-    assert(load("data/testOutput", testOutput, TEST_OUTPUT_SIZE) == 0);
-    assert(load("data/dlTestKernel", dlTestKernel, TEST_KERNEL_SIZE) == 0);
-    assert(load("data/dlTestMiniBatch", dlTestMiniBatch, testMiniBatchSize, TEST_MINI_BATCH_SIZE) == 0);
-    assert(load("data/dlTestOutput", dlTestOutput, TEST_OUTPUT_SIZE) == 0);
+    assert(load((char*) "data/testKernel.npy", testKernel, TEST_KERNEL_SIZE) == 0);
+    assert(load((char*) "data/testMiniBatch.npy", testMiniBatch, TEST_MINI_BATCH_SIZE) == 0);
+    assert(load((char*) "data/testOutput.npy", testOutput, TEST_OUTPUT_SIZE) == 0);
+    assert(load((char*) "data/dlTestKernel.npy", dlTestKernel, TEST_KERNEL_SIZE) == 0);
+    assert(load((char*) "data/dlTestMiniBatch.npy", dlTestMiniBatch, TEST_MINI_BATCH_SIZE) == 0);
+    assert(load((char*) "data/dlTestOutput.npy", dlTestOutput, TEST_OUTPUT_SIZE) == 0);
        
     if (munmap(start, MEMORY) == -1)
     {
